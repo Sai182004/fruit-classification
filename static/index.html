@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Fruit Classifier — Demo UI</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 720px; margin: auto; }
+    .preview { width: 200px; height: 200px; object-fit: cover; border-radius:8px; border:1px solid #ddd; }
+    .result { background: #f8f8f8; padding: 12px; border-radius:6px; margin-top: 12px; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+  </style>
+</head>
+<body>
+  <h2>Fruit Classifier (demo)</h2>
+  <p>Upload an image — UI calls <code>/api/predict</code> and shows the JSON output.</p>
+
+  <input type="file" id="file" accept="image/*" />
+  <button id="btn">Classify</button>
+  <div id="loading" style="display:none">Working…</div>
+
+  <div id="previewWrap" style="margin-top:10px; display:none;">
+    <img id="preview" class="preview" src="" alt="preview" />
+  </div>
+
+  <div id="result" class="result" style="display:none;">
+    <div id="pred"></div>
+    <h4>Raw JSON</h4>
+    <pre id="json"></pre>
+  </div>
+
+  <script>
+    const fileEl = document.getElementById('file');
+    const btn = document.getElementById('btn');
+    const preview = document.getElementById('preview');
+    const previewWrap = document.getElementById('previewWrap');
+    const result = document.getElementById('result');
+    const pred = document.getElementById('pred');
+    const jsonPre = document.getElementById('json');
+    const loading = document.getElementById('loading');
+
+    let chosenFile = null;
+    fileEl.addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      chosenFile = f;
+      preview.src = URL.createObjectURL(f);
+      previewWrap.style.display = 'block';
+      result.style.display = 'none';
+    });
+
+    btn.addEventListener('click', async () => {
+      if (!chosenFile) { alert('Choose a file first'); return; }
+      loading.style.display = 'block';
+      const fd = new FormData();
+      fd.append('file', chosenFile);
+      fd.append('top_k', '3');
+
+      try {
+        const res = await fetch('/api/predict', { method: 'POST', body: fd });
+        const data = await res.json();
+        pred.innerHTML = `<strong>${data.prediction}</strong> — ${data.confidence_score} (model: ${data.model_version})`;
+        jsonPre.textContent = JSON.stringify(data, null, 2);
+        result.style.display = 'block';
+      } catch (err) {
+        alert('API error: ' + err);
+      } finally {
+        loading.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
